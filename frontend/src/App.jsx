@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useBLE } from "./hooks/useBLE";
+import { useBLEContext } from "./context/BLEContext"; // Updated import
 import { Sun, Zap, Activity, Settings, Thermometer } from "lucide-react";
 import LiveChart from "./components/LiveChart";
 import DiagnosticAlerts from "./components/DiagnosticAlerts";
@@ -7,7 +7,7 @@ import Topbar from "./components/TopBar";
 import { Link } from "react-router-dom";
 
 const App = () => {
-  const { connect, isConnected, sensorData } = useBLE();
+  const { connect, isConnected, sensorData } = useBLEContext(); // Now using global context
   const [dataHistory, setDataHistory] = useState([]);
 
   useEffect(() => {
