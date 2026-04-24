@@ -7,7 +7,7 @@ export default function DiagnosticAlerts({ data }) {
   // Wait for the first real data packet before running diagnostics
   if (data.V === 0 && data.C === 0) {
      return (
-       <div className="flex flex-col items-center justify-center h-48 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+       <div className="flex flex-col items-center justify-center h-48 bg-[#09090b] rounded-xl border border-dashed border-slate-200">
          <Info className="text-slate-400 mb-2" size={24} />
          <p className="text-slate-500 text-sm">Awaiting telemetry for diagnostics...</p>
        </div>

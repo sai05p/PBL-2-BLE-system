@@ -1,150 +1,272 @@
-import React, { useState, useEffect } from 'react';
-import { useBLE } from './hooks/useBLE';
-import { Battery, Zap, Activity, Thermometer, Sun } from 'lucide-react';
-import LiveChart from './components/LiveChart';
-import DiagnosticAlerts from './components/DiagnosticAlerts';
+import React, { useState, useEffect } from "react";
+import { useBLE } from "./hooks/useBLE";
+import { Sun, Zap, Activity, Settings, Thermometer } from "lucide-react";
+import LiveChart from "./components/LiveChart";
+import DiagnosticAlerts from "./components/DiagnosticAlerts";
+import Topbar from "./components/TopBar";
+import { Link } from "react-router-dom";
 
-function App() {
+const App = () => {
   const { connect, isConnected, sensorData } = useBLE();
   const [dataHistory, setDataHistory] = useState([]);
 
   useEffect(() => {
-    if (sensorData.V > 0 || sensorData.C > 0) {
-      setDataHistory(prev => {
-        const newHistory = [...prev, { ...sensorData, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: "2-digit", second: "2-digit" }) }];
-        return newHistory.slice(-20); 
+    if (sensorData?.V > 0 || sensorData?.C > 0) {
+      setDataHistory((prev) => {
+        const newHistory = [
+          ...prev,
+          {
+            ...sensorData,
+            time: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+          },
+        ];
+        return newHistory.slice(-20);
       });
     }
   }, [sensorData]);
 
+  const isDataAvailable =
+    isConnected && (sensorData?.V > 0 || sensorData?.C > 0);
+  const efficiency = isDataAvailable
+    ? ((sensorData.P / 5) * 100).toFixed(1)
+    : 0;
+
   return (
-    // The outer container handles the dark background and baseline padding
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans p-4 md:p-6 selection:bg-emerald-500/30">
-      
-      {/* Removed all max-width and mx-auto constraints. It now spans 100% of the available width. */}
-      <div className="w-full space-y-6">
-        
-        {/* Full-Width Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#1e293b] p-6 rounded-2xl border border-slate-800 shadow-sm w-full">
-          <div className="flex items-center gap-4">
-            <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
-              <Sun size={28} className="text-emerald-400" strokeWidth={2} />
+    <div
+      className="min-h-screen bg-[#09090b] text-zinc-300 p-6 flex flex-col"
+      style={{ fontFamily: "'Outfit', sans-serif" }}
+    >
+      <Topbar
+        rightElement={
+          <>
+            <div
+              className={`flex items-center gap-2 text-xs font-medium tracking-wider ${isConnected ? "text-emerald-400" : "text-zinc-500"}`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-red-500/80"}`}
+              ></div>
+              {isConnected ? "CONNECTED" : "STANDBY"}
+            </div>
+            <button
+              onClick={connect}
+              disabled={isConnected}
+              className={`px-4 py-2 rounded text-xs font-semibold tracking-wider transition-all duration-200 ${
+                isConnected
+                  ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                  : "bg-zinc-100 hover:bg-white text-zinc-900 active:scale-95"
+              }`}
+            >
+              {isConnected ? "ACTIVE" : "CONNECT"}
+            </button>
+          </>
+        }
+      />
+
+      {/* Main Grid Content */}
+      <main className="flex-1 flex flex-col gap-6">
+        {/* Top 4 Metric Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Voltage */}
+          <div className="bg-[#121214] rounded-xl p-5 border border-zinc-800/50 flex flex-col justify-between h-32 hover:border-zinc-700 transition-colors">
+            <div className="flex justify-between items-start text-zinc-500 text-xs font-medium tracking-widest">
+              <span>VOLTAGE</span>
+              <Zap className="w-4 h-4 text-amber-400/80" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
-                Solar<span className="font-light text-slate-400">Monitor</span>
-              </h1>
-              <p className="text-sm text-slate-400 mt-1">Live Telemetry & Diagnostics</p>
-            </div>
-          </div>
-          
-          <button 
-            onClick={connect}
-            disabled={isConnected}
-            className={`px-8 py-3.5 rounded-xl font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 ${
-              isConnected 
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 cursor-default' 
-                : 'bg-emerald-500 hover:bg-emerald-400 text-[#0f172a] shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-95'
-            }`}
-          >
-            {isConnected ? (
-              <>
-                <span className="relative flex h-3 w-3 mr-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              <div className="text-3xl font-semibold text-zinc-100">
+                {isDataAvailable ? sensorData.V.toFixed(2) : "--"}
+                <span className="text-base text-zinc-500 ml-1 font-normal">
+                  V
                 </span>
-                System Connected
-              </>
-            ) : 'Connect Device'}
-          </button>
-        </header>
-
-        {/* Full-Width Telemetry Grid */}
-        <main className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
-          <StatCard 
-            title="Voltage" 
-            value={sensorData.V.toFixed(2)} 
-            unit="V" 
-            icon={<Battery size={24} />} 
-            color="text-blue-400"
-            bg="bg-blue-400/10"
-          />
-          <StatCard 
-            title="Current" 
-            value={sensorData.C.toFixed(2)} 
-            unit="A" 
-            icon={<Activity size={24} />} 
-            color="text-purple-400"
-            bg="bg-purple-400/10"
-          />
-          <StatCard 
-            title="Power Output" 
-            value={sensorData.P.toFixed(2)} 
-            unit="W" 
-            icon={<Zap size={24} />} 
-            color="text-emerald-400"
-            bg="bg-emerald-400/10"
-          />
-          <StatCard 
-            title="Temperature" 
-            value={sensorData.T.toFixed(1)} 
-            unit="°C" 
-            icon={<Thermometer size={24} />} 
-            color="text-orange-400"
-            bg="bg-orange-400/10"
-          />
-        </main>
-
-        {/* Chart & Diagnostics Section */}
-        <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-6 w-full">
-          
-          {/* Output Trend */}
-          <div className="xl:col-span-2 bg-[#1e293b] p-6 md:p-8 rounded-3xl border border-slate-800 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-base font-bold tracking-wider text-slate-300 uppercase">
-                Efficiency Trend
-              </h3>
-              <div className="flex items-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full">
-                Live Data
               </div>
             </div>
-            <div className="h-80 w-full rounded-xl overflow-hidden flex-1">
-               <LiveChart data={dataHistory} />
+          </div>
+
+          {/* Current */}
+          <div className="bg-[#121214] rounded-xl p-5 border border-zinc-800/50 flex flex-col justify-between h-32 hover:border-zinc-700 transition-colors">
+            <div className="flex justify-between items-start text-zinc-500 text-xs font-medium tracking-widest">
+              <span>CURRENT</span>
+              <Activity className="w-4 h-4 text-sky-400/80" />
+            </div>
+            <div>
+              <div className="text-3xl font-semibold text-zinc-100">
+                {isDataAvailable ? sensorData.C.toFixed(2) : "--"}
+                <span className="text-base text-zinc-500 ml-1 font-normal">
+                  A
+                </span>
+              </div>
             </div>
           </div>
-          
-          {/* Diagnostics */}
-          <div className="bg-[#1e293b] p-6 md:p-8 rounded-3xl border border-slate-800 shadow-sm flex flex-col">
-            <h3 className="text-base font-bold tracking-wider text-slate-300 uppercase mb-8">
-              System Diagnostics
+
+          {/* Power */}
+          <div className="bg-[#121214] rounded-xl p-5 border border-zinc-800/50 flex flex-col justify-between h-32 hover:border-zinc-700 transition-colors">
+            <div className="flex justify-between items-start text-zinc-500 text-xs font-medium tracking-widest">
+              <span>POWER</span>
+              <Settings className="w-4 h-4 text-emerald-400/80" />
+            </div>
+            <div>
+              <div className="text-3xl font-semibold text-zinc-100">
+                {isDataAvailable ? sensorData.P.toFixed(2) : "--"}
+                <span className="text-base text-zinc-500 ml-1 font-normal">
+                  W
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Temperature */}
+          <div className="bg-[#121214] rounded-xl p-5 border border-zinc-800/50 flex flex-col justify-between h-32 hover:border-zinc-700 transition-colors">
+            <div className="flex justify-between items-start text-zinc-500 text-xs font-medium tracking-widest">
+              <span>TEMP</span>
+              <Thermometer className="w-4 h-4 text-rose-400/80" />
+            </div>
+            <div>
+              <div className="text-3xl font-semibold text-zinc-100">
+                {isDataAvailable ? sensorData.T.toFixed(1) : "--"}
+                <span className="text-base text-zinc-500 ml-1 font-normal">
+                  °C
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Middle Section: Chart & Side Metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Chart */}
+          <div className="lg:col-span-2 bg-[#121214] rounded-xl border border-zinc-800/50 p-5 flex flex-col min-h-[300px]">
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-xs font-medium tracking-widest text-zinc-500">
+                TELEMETRY
+              </span>
+              {isDataAvailable && (
+                <span className="text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>{" "}
+                  Live
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1 w-full relative">
+              {dataHistory.length > 0 ? (
+                <LiveChart data={dataHistory} />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs tracking-wide text-zinc-600">
+                  Awaiting datastream...
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Efficiency and Health */}
+          <div className="flex flex-col gap-6">
+            {/* Efficiency */}
+            <div className="bg-[#121214] rounded-xl border border-zinc-800/50 p-5 flex-1 flex flex-col justify-center">
+              <h3 className="text-xs font-medium tracking-widest text-zinc-500 mb-4">
+                EFFICIENCY
+              </h3>
+              <div className="text-5xl font-light text-zinc-100 mb-6">
+                {isDataAvailable ? efficiency : "--"}
+                <span className="text-2xl text-zinc-500">%</span>
+              </div>
+              <div className="w-full bg-zinc-800/50 rounded-full h-1 mb-2 overflow-hidden">
+                <div
+                  className="bg-amber-400/80 h-1 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${Math.min(Math.max(efficiency, 0), 100)}%`,
+                  }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-[10px] text-zinc-600 tracking-wider">
+                <span>0%</span>
+                <span>5W RATED</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            {/* Health */}
+            <div className="bg-[#121214] rounded-xl border border-zinc-800/50 p-5 flex-1 flex flex-col justify-center">
+              <h3 className="text-xs font-medium tracking-widest text-zinc-500 mb-6">
+                DIAGNOSTICS
+              </h3>
+              <div className="flex justify-between items-center px-4">
+                <div className="flex flex-col items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-full border flex items-center justify-center text-sm font-medium transition-colors ${sensorData?.V > 0 ? "border-amber-400/20 text-amber-400 bg-amber-400/5" : "border-zinc-800 text-zinc-600"}`}
+                  >
+                    V
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-full border flex items-center justify-center text-sm font-medium transition-colors ${sensorData?.C > 0 ? "border-sky-400/20 text-sky-400 bg-sky-400/5" : "border-zinc-800 text-zinc-600"}`}
+                  >
+                    I
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-full border flex items-center justify-center text-sm font-medium transition-colors ${sensorData?.T > 0 ? "border-emerald-400/20 text-emerald-400 bg-emerald-400/5" : "border-zinc-800 text-zinc-600"}`}
+                  >
+                    T
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Diagnostic Alerts */}
+          <div className="bg-[#121214] rounded-xl border border-zinc-800/50 p-5 min-h-[160px] flex flex-col">
+            <h3 className="text-xs font-medium tracking-widest text-zinc-500 mb-4">
+              SYSTEM LOG
             </h3>
-            <div className="flex-1 bg-[#0f172a] rounded-xl p-4 border border-slate-800/50 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto text-sm text-zinc-400">
               <DiagnosticAlerts data={sensorData} />
             </div>
           </div>
 
-        </section>
+          {/* AI Detect */}
+          <div className="bg-[#121214] rounded-xl border border-zinc-800/50 p-5 min-h-[160px]">
+            <h3 className="text-xs font-medium tracking-widest text-zinc-500 mb-4">
+              AI ANALYSIS
+            </h3>
+            <p className="text-sm text-zinc-500 font-light leading-relaxed">
+              System operating within expected parameters. Connect hardware to
+              begin anomaly detection sequence.
+            </p>
+          </div>
 
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, unit, icon, color, bg }) {
-  return (
-    <div className="bg-[#1e293b] p-6 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-slate-600 transition-all duration-300 shadow-sm group w-full">
-      <div className="flex items-center justify-between mb-8">
-        <p className="text-base font-semibold text-slate-400 group-hover:text-slate-300 transition-colors">{title}</p>
-        <div className={`p-3 rounded-xl ${bg} ${color}`}>
-          {icon}
+          {/* Hardware Specs */}
+          <div className="bg-[#121214] rounded-xl border border-zinc-800/50 p-5 min-h-[160px]">
+            <h3 className="text-xs font-medium tracking-widest text-zinc-500 mb-4">
+              HARDWARE
+            </h3>
+            <ul className="space-y-2.5 text-xs text-zinc-500">
+              <li className="flex justify-between border-b border-zinc-800/50 pb-2">
+                <span>MCU</span>
+                <span className="text-zinc-300">Nano 33 BLE</span>
+              </li>
+              <li className="flex justify-between border-b border-zinc-800/50 pb-2">
+                <span>SENSORS</span>
+                <span className="text-zinc-300">INA219 / DHT11</span>
+              </li>
+              <li className="flex justify-between border-b border-zinc-800/50 pb-2">
+                <span>RATED SPEC</span>
+                <span className="text-zinc-300">5W / 9V</span>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
-      <div className="flex items-baseline gap-1.5">
-        <h2 className="text-5xl font-extrabold tracking-tight text-white">{value}</h2>
-        <span className="text-xl font-medium text-slate-500">{unit}</span>
-      </div>
+      </main>
     </div>
   );
-}
+};
 
 export default App;
