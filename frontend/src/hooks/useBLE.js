@@ -10,7 +10,7 @@ export function useBLE() {
   const connect = async () => {
     try {
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ name: "Nano33_Solar" }],
+        acceptAllDevices: true, 
         optionalServices: [SERVICE_UUID]
       });
 
